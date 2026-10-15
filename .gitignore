@@ -1,0 +1,22 @@
+# Credenciales y configuración local
+.env
+.env.*
+!.env.example
+*.token
+*credentials*.json
+*client_secret*.json
+secrets.yaml
+.storage/
+
+# Archivos locales generados
+__pycache__/
+*.pyc
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+.orca/
+.venv/
+backend/.venv/
+backend/*.sqlite3
+private_uploads/

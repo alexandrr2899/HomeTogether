@@ -1,0 +1,71 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${HT_DB_NAME}
+      POSTGRES_USER: ${HT_DB_USER}
+      POSTGRES_PASSWORD: ${HT_DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: ${HT_BACKEND_IMAGE}
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      HT_DJANGO_SECRET_KEY: ${HT_DJANGO_SECRET_KEY}
+      HT_DB_HOST: postgres
+      HT_DB_PORT: "5432"
+      HT_DB_NAME: ${HT_DB_NAME}
+      HT_DB_USER: ${HT_DB_USER}
+      HT_DB_PASSWORD: ${HT_DB_PASSWORD}
+      HT_DEBUG: "0"
+      HT_ALLOWED_HOSTS: ${HT_ALLOWED_HOSTS}
+      HT_CSRF_TRUSTED_ORIGINS: ${HT_CSRF_TRUSTED_ORIGINS}
+      HT_TRUST_PROXY: "1"
+      HT_SSL_REDIRECT: "1"
+      HT_HSTS: "1"
+      HT_PRIVATE_FILES_DIR: /private_uploads
+      HOME_ASSISTANT_URL: ${HOME_ASSISTANT_URL}
+      HOME_ASSISTANT_TOKEN: ${HOME_ASSISTANT_TOKEN}
+      CLOUDFLARE_ACCESS_CLIENT_ID: ${CLOUDFLARE_ACCESS_CLIENT_ID:-}
+      CLOUDFLARE_ACCESS_CLIENT_SECRET: ${CLOUDFLARE_ACCESS_CLIENT_SECRET:-}
+      HT_LIST_COMPRAS_ENTITY_ID: ${HT_LIST_COMPRAS_ENTITY_ID}
+      HT_LIST_SUPER_ENTITY_ID: ${HT_LIST_SUPER_ENTITY_ID}
+      HT_LIST_TASKS_ENTITY_ID: ${HT_LIST_TASKS_ENTITY_ID}
+      HT_GOOGLE_CLIENT_ID: ${HT_GOOGLE_CLIENT_ID}
+      HT_GOOGLE_CLIENT_SECRET: ${HT_GOOGLE_CLIENT_SECRET}
+      HT_GOOGLE_REFRESH_TOKEN: ${HT_GOOGLE_REFRESH_TOKEN}
+      HT_GOOGLE_CALENDAR_ID: ${HT_GOOGLE_CALENDAR_ID}
+      HT_GOOGLE_REDIRECT_URI: ${HT_GOOGLE_REDIRECT_URI}
+      HT_OPENCLAW_URL: ${HT_OPENCLAW_URL:-}
+      HT_OPENCLAW_TOKEN: ${HT_OPENCLAW_TOKEN:-}
+      HT_OPENCLAW_AGENT_ID: ${HT_OPENCLAW_AGENT_ID:-jaime}
+    volumes:
+      - private_uploads:/private_uploads
+      - django_static:/app/staticfiles
+
+  frontend:
+    image: ${HT_FRONTEND_IMAGE}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "127.0.0.1:${HT_HTTP_PORT:-8088}:8080"
+    volumes:
+      - django_static:/staticfiles:ro
+
+volumes:
+  postgres_data:
+  private_uploads:
+  django_static:
