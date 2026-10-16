@@ -1,6 +1,6 @@
 # Integración de Jaime con OpenClaw en mewtwo
 
-**Estado:** el adaptador y la pantalla de chat están preparados en lugia. Home Together se desplegará en Portainer; OpenClaw se ejecutará en mewtwo fuera de ese stack. No hay Gateway de OpenClaw accesible desde este entorno, credencial configurada ni prueba real de conversación.
+**Estado:** el adaptador y la pantalla de chat están preparados en lugia. Home Together se desplegará en Portainer; OpenClaw se ejecutará en mewtwo fuera de ese stack. El informe técnico entregado el 15 de octubre de 2026 identifica el Gateway existente en `10.0.0.63:18789`, con bind `loopback`, autenticación por token y Chat Completions habilitado. Desde lugia todavía no se ha completado una prueba autenticada: SSH a `alexandrr@10.0.0.63` rechazó las credenciales disponibles y no hay URL ni token de OpenClaw configurados en Home Together.
 
 ## Flujo elegido
 
@@ -12,7 +12,11 @@ Móvil o tablet → sesión/CSRF de Django (contenedor Portainer) → Jaime en D
                                       Django valida la función y devuelve su resultado
 ```
 
-La interfaz de Home Together habla únicamente con Django. Django identifica a Alexander o Lastenia mediante su sesión y llama desde el servidor a `POST /v1/chat/completions` del Gateway, apuntando a un agente `jaime`. OpenClaw ofrece este endpoint desactivado por defecto y acepta funciones aportadas por el cliente; cuando devuelve una llamada de función, **Django** decide si la ejecuta. No se instala en OpenClaw un token de Home Assistant ni credenciales de Google. [Contrato de chat y funciones de OpenClaw](https://docs.openclaw.ai/gateway/openai-http-api).
+La interfaz de Home Together habla únicamente con Django. Django identifica a Alexander o Lastenia mediante su sesión y llama desde el servidor a `POST /v1/chat/completions` del Gateway, apuntando al agente configurado (se prevé uno dedicado llamado `jaime`). OpenClaw ofrece este endpoint desactivado por defecto y acepta funciones aportadas por el cliente; cuando devuelve una llamada de función, **Django** decide si la ejecuta. No se instala en OpenClaw un token de Home Assistant ni credenciales de Google. [Contrato de chat y funciones de OpenClaw](https://docs.openclaw.ai/gateway/openai-http-api).
+
+El informe de mewtwo no mostró agentes explícitos en `agents.list`; la prueba local propuesta allí usa `openclaw/default`. El valor `HT_OPENCLAW_AGENT_ID=jaime` del repositorio es una **intención de configuración**, no una entidad confirmada. Primero se comprobará una conversación autenticada con `openclaw/default` y la lista real de modelos. Después se decidirá si un agente dedicado `jaime` puede añadirse sin alterar los recorridos de Telegram y Home Assistant. Home Together no declarará la conexión activa mientras su agente configurado no aparezca en `GET /v1/models`.
+
+Las funciones que Home Together ofrece en la petición HTTP **no limitan las herramientas internas del agente OpenClaw**. Antes de usar un agente real para el chat familiar habrá que comprobar su política de herramientas y su acceso a archivos, canales y otros servicios. La prueba de `openclaw/default` sirve para verificar el transporte y no implica habilitarlo para uso familiar.
 
 En el primer alcance, las funciones de solo lectura serán agenda acotada, listas y presencia. Bienestar se consultará únicamente si el titular mantiene activado `allow_jaime`. Las funciones de cambio solo crearán una `ActionProposal` usando el usuario autenticado: añadir a To-do, añadir a Compras o completar una tarea. El usuario verá la propuesta en Home Together y la confirmará por una segunda petición con sesión y CSRF; Django usará entonces las operaciones actuales que verifican el resultado en el origen. Las acciones del hogar exigirán después una lista explícita de entidades y operaciones autorizadas.
 
@@ -22,7 +26,7 @@ Django tratará argumentos y texto devueltos por OpenClaw como entrada no confia
 
 `localhost` dentro del contenedor Django apunta al contenedor, no a mewtwo. En Linux, Compose puede añadir `extra_hosts: ["host.docker.internal:host-gateway"]` al **backend**; Django llamaría, por ejemplo, a `http://host.docker.internal:18789`, siempre que esa dirección resuelva a una interfaz donde escuche el Gateway. El valor `host-gateway` suele resolver a la IP del bridge predeterminado del host, que se comprobará en mewtwo antes de fijar la URL. [Redes de Docker Compose](https://docs.docker.com/compose/how-tos/networking/).
 
-OpenClaw normalmente escucha solo en `127.0.0.1`. En ese estado, el contenedor **no puede** alcanzarlo mediante `host.docker.internal`: la petición llega a la IP del bridge, no al loopback del host. La opción inicial será configurar `gateway.bind: "custom"` con `gateway.customBindHost` igual a la IP del host accesible desde Docker, conservar autenticación por token y bloquear el puerto desde las interfaces públicas. Se verificará que OpenClaw siga disponible por loopback para su uso local. La dirección exacta y las reglas de red dependen del inventario de mewtwo; no se pondrá `bind: "lan"` a ciegas. [Modos de bind de OpenClaw](https://docs.openclaw.ai/gateway/config-gateway), [exposición de red](https://docs.openclaw.ai/gateway/security/network-exposure).
+El informe de mewtwo confirma un bind solo a `127.0.0.1` y `[::1]`. En ese estado, el contenedor **no puede** alcanzarlo mediante `host.docker.internal`: la petición llega a la IP del bridge, no al loopback del host. Tras inspeccionar la red real, una opción es configurar `gateway.bind: "custom"` con `gateway.customBindHost` igual a una IP del host accesible desde Docker, conservar autenticación por token y bloquear el puerto desde las interfaces públicas. Se verificará que OpenClaw siga disponible por loopback para su uso local. La interfaz Docker y las reglas de red siguen sin comprobar; no se pondrá `bind: "lan"` a ciegas. [Modos de bind de OpenClaw](https://docs.openclaw.ai/gateway/config-gateway), [exposición de red](https://docs.openclaw.ai/gateway/security/network-exposure).
 
 Si la configuración real de OpenClaw impide ese bind, una alternativa es un proxy **en el host** que escuche solo en la interfaz Docker y reenvíe a `127.0.0.1:18789`, idealmente limitando las rutas a `/v1/models` y `/v1/chat/completions`. Se elegirá tras inspeccionar el servicio. El teléfono seguirá entrando solo al dominio HTTPS de Home Together; nunca llamará al Gateway directamente.
 
@@ -34,8 +38,8 @@ Las consultas de Jaime envían al Gateway el texto del usuario y los resultados 
 
 ## Activación y verificación
 
-1. Inspeccionar la versión, el proceso o servicio del host, el puerto, el bind, el modo de autenticación y las herramientas del OpenClaw real en mewtwo; no modificarlo por suposición.
-2. Preparar el agente `jaime` con herramientas internas restringidas y habilitar `gateway.http.endpoints.chatCompletions.enabled` en esa instancia. Registrar el token solo fuera de Git.
+1. Confirmar el inventario recibido de mewtwo y ejecutar allí una prueba **autenticada** de `GET /v1/models` y `POST /v1/chat/completions` con `openclaw/default`, sin imprimir el token ni datos personales. La prueba previa sin credenciales solo devolvió HTTP 401; no demuestra que el chat funcione. Comprobar también las herramientas reales del agente predeterminado.
+2. Preparar, si procede, el agente `jaime` con herramientas internas restringidas. Chat Completions figura habilitado en el informe; verificarlo en vez de cambiarlo por suposición. Registrar el token solo fuera de Git.
 3. Añadir el mapeo `host.docker.internal:host-gateway` solo al backend de Portainer, comprobar resolución y alcance desde ese contenedor y probar `GET /v1/models` sin imprimir el token; comprobar que el agente objetivo aparece.
 4. Probar una conversación de solo lectura, una solicitud de función de lectura y la separación entre Alexander y Lastenia. Comprobar estados de fuente y privacidad de Garmin.
 5. Probar una propuesta sin ejecutarla; después, con destino y elemento temporal autorizados, confirmarla desde la interfaz y verificar el origen real. Comprobar rechazo a llamadas no permitidas, fallos de red y resultados inciertos.
