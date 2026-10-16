@@ -42,6 +42,16 @@ export function WellnessSettings({ onChanged }: { onChanged: () => Promise<void>
     }))
   }
 
+  function toggleJaimeViewer(id: number) {
+    setSuccess('')
+    setDraft((current) => current && ({
+      ...current,
+      jaime_viewers: current.jaime_viewers.includes(id)
+        ? current.jaime_viewers.filter((viewer) => viewer !== id)
+        : [...current.jaime_viewers, id],
+    }))
+  }
+
   async function save() {
     if (!draft) return
     setBusy(true)
@@ -69,8 +79,8 @@ export function WellnessSettings({ onChanged }: { onChanged: () => Promise<void>
     {error && <p className="form-error" role="alert">{error}</p>}
     {catalog?.status === 'Sin conexión' && <p className="muted">Sin conexión con Garmin. Tus preferencias guardadas se conservan.</p>}
     {catalog?.status === 'Sin configurar' && <p className="muted">Sin configurar</p>}
-    {draft && catalog?.status === 'Conectado' && <>
-      {groups.map((group) => <div className="garmin-group" key={group}>
+    {draft && <>
+      {catalog?.status === 'Conectado' && <>{groups.map((group) => <div className="garmin-group" key={group}>
         <h3>{group}</h3>
         <div className="privacy-options">{catalog.stats.filter((stat) => stat.group === group).map((stat) => <label key={stat.key}>
           <input type="checkbox" checked={draft.visible_metrics.includes(stat.key)} disabled={busy || (!stat.available && !draft.visible_metrics.includes(stat.key))} onChange={() => toggleVisible(stat.key)} />
@@ -84,8 +94,9 @@ export function WellnessSettings({ onChanged }: { onChanged: () => Promise<void>
           const stat = catalog.stats.find((item) => item.key === key)
           return stat && <label key={key}><input type="checkbox" checked={draft.shared_metrics.includes(key)} disabled={busy} onChange={() => toggleShared(key)} /><span><strong>{stat.label}</strong><small>Permitir que la otra cuenta lo consulte</small></span></label>
         })}</div> : <p className="muted">Sin indicadores seleccionados.</p>}
-      </div>
-      <div className="privacy-options garmin-jaime"><label><input type="checkbox" checked={draft.allow_jaime} disabled={busy} onChange={() => { setSuccess(''); setDraft({ ...draft, allow_jaime: !draft.allow_jaime }) }} /><span><strong>Compartir indicadores desde Home Together con Jaime</strong><small>Controla esta función de la app. El agente principal conserva sus herramientas generales de OpenClaw; este ajuste no las limita.</small></span></label></div>
+      </div></>}
+      <div className="privacy-options garmin-jaime"><label><input type="checkbox" checked={draft.allow_jaime} disabled={busy} onChange={() => { setSuccess(''); setDraft({ ...draft, allow_jaime: !draft.allow_jaime }) }} /><span><strong>Permitir mis indicadores a Jaime desde Home Together</strong><small>Controla esta función de la app. El agente principal conserva sus herramientas generales de OpenClaw; este ajuste no las limita.</small></span></label></div>
+      {draft.allow_jaime && !!draft.available_jaime_viewers.length && <div className="garmin-sharing"><h3>Consultas de otras cuentas mediante Jaime</h3><p className="muted intro">El permiso se aplica solo a los indicadores que muestras y no los añade al Inicio de la otra cuenta.</p><div className="privacy-options">{draft.available_jaime_viewers.map((viewer) => <label key={viewer.id}><input type="checkbox" checked={draft.jaime_viewers.includes(viewer.id)} disabled={busy} onChange={() => toggleJaimeViewer(viewer.id)} /><span><strong>{viewer.name}</strong><small>Permitirle consultar mis indicadores mediante Jaime</small></span></label>)}</div></div>}
       <button className="primary-button" disabled={busy || !changed} onClick={() => void save()}>{busy ? 'Guardando…' : 'Guardar preferencias'}</button>
       {success && <p className="success-message" role="status">{success}</p>}
     </>}

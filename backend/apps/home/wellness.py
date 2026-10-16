@@ -20,7 +20,8 @@ def _visible_keys(account, viewer, *, for_jaime=False):
     preference = preferences_for(account)
     selected = preference.visible_metrics if account.pk == viewer.pk else []
     if for_jaime:
-        selected = preference.visible_metrics if account.pk == viewer.pk and preference.allow_jaime else []
+        permitted = account.pk == viewer.pk or preference.jaime_viewers.filter(pk=viewer.pk).exists()
+        selected = preference.visible_metrics if preference.allow_jaime and permitted else []
     elif account.pk != viewer.pk:
         selected = [key for key in preference.visible_metrics if key in preference.shared_metrics]
     return [key for key in selected if key in GARMIN_STATS]

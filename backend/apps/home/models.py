@@ -9,4 +9,5 @@ class WellnessPreference(models.Model):
     visible_metrics = models.JSONField(default=default_visible_stats)
     shared_metrics = models.JSONField(default=list)
     allow_jaime = models.BooleanField(default=False)
+    jaime_viewers = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="jaime_wellness_grants")
     updated_at = models.DateTimeField(auto_now=True)

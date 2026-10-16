@@ -74,6 +74,10 @@ class JaimeChatTests(TestCase):
             result = run_tool("consultar_presencia", {}, self.actor)
         self.assertNotIn("latitude", result["people"][0])
 
+    def test_wellness_tool_rejects_unknown_person(self):
+        result = run_tool("consultar_bienestar", {"persona": "Persona desconocida"}, self.actor)
+        self.assertEqual(result["status"], "Rechazado")
+
     def test_one_message_cannot_create_two_proposals(self):
         calls = [
             {"id": f"call-{index}", "type": "function", "function": {"name": "proponer_cambio", "arguments": json.dumps({"tipo": "add_task", "nombre": "Tarea aislada"})}}

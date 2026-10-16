@@ -94,6 +94,33 @@ class WellnessPrivacyTests(TestCase):
         self.assertFalse(WellnessPreference.objects.get(account=self.alexander).allow_jaime)
         self.assertEqual(client.get("/api/v1/home/wellness/me/").json()["status"], "Sin configurar")
 
+    def test_owner_can_grant_and_revoke_partner_only_through_jaime(self):
+        client = Client(enforce_csrf_checks=True, HTTP_HOST="127.0.0.1")
+        client.force_login(self.alexander)
+        client.get("/api/v1/accounts/csrf/")
+        token = client.cookies["csrftoken"].value
+        path = "/api/v1/home/wellness/preferences/"
+        payload = {"allow_jaime": True, "jaime_viewers": [self.lastenia.pk]}
+        saved = client.patch(path, data=json.dumps(payload), content_type="application/json", HTTP_X_CSRFTOKEN=token)
+        self.assertEqual(saved.status_code, 200)
+        self.assertEqual(saved.json()["jaime_viewers"], [self.lastenia.pk])
+        self.assertEqual(saved.json()["shared_metrics"], [])
+        invalid = client.patch(path, data=json.dumps({"jaime_viewers": [self.alexander.pk]}), content_type="application/json", HTTP_X_CSRFTOKEN=token)
+        self.assertEqual(invalid.status_code, 400)
+        with patch("apps.home.wellness.configured_home_assistant_client") as source:
+            source.return_value.get.side_effect = self.fake_state
+            through_jaime = read_wellness(self.alexander, self.lastenia, for_jaime=True)
+            direct = read_wellness(self.alexander, self.lastenia)
+        self.assertEqual(set(through_jaime["metrics"]), {"steps", "sleep", "activity"})
+        self.assertEqual(direct["metrics"], {})
+        client.patch(path, data=json.dumps({"allow_jaime": False}), content_type="application/json", HTTP_X_CSRFTOKEN=token)
+        with patch("apps.home.wellness.configured_home_assistant_client") as source:
+            disabled = read_wellness(self.alexander, self.lastenia, for_jaime=True)
+            source.assert_not_called()
+        self.assertEqual(disabled["metrics"], {})
+        client.patch(path, data=json.dumps({"allow_jaime": True, "jaime_viewers": []}), content_type="application/json", HTTP_X_CSRFTOKEN=token)
+        self.assertEqual(read_wellness(self.alexander, self.lastenia, for_jaime=True)["metrics"], {})
+
     def test_selection_changes_own_metrics_without_exposing_unknown_sensors(self):
         client = Client(enforce_csrf_checks=True, HTTP_HOST="127.0.0.1")
         client.force_login(self.alexander)

@@ -55,7 +55,7 @@ export type JaimeChatResponse = { status: string; message: string; proposal_ids:
 export type WellnessMetric = { label: string; kind: 'number' | 'duration' | 'text'; status: string; value: number | string | null; unit: string | null; last_updated: string | null; started_at?: string | null }
 export type WellnessResponse = { status: string; account_id: number; metrics: Record<string, WellnessMetric>; last_checked_at: string | null }
 export type SharedWellness = WellnessResponse & { name: string }
-export type WellnessPreferences = { visible_metrics: string[]; shared_metrics: string[]; allow_jaime: boolean }
+export type WellnessPreferences = { visible_metrics: string[]; shared_metrics: string[]; allow_jaime: boolean; jaime_viewers: number[]; available_jaime_viewers: { id: number; name: string }[] }
 export type GarminStat = { key: string; label: string; group: string; kind: WellnessMetric['kind']; available: boolean }
 export type GarminCatalog = { status: string; stats: GarminStat[] }
 
