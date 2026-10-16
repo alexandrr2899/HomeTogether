@@ -9,6 +9,7 @@ export function JaimeView({ isAdmin, onChanged }: { isAdmin: boolean; onChanged:
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [chatStatus, setChatStatus] = useState('Cargando…')
+  const [bridgeStatus, setBridgeStatus] = useState('Sin configurar')
   const [conversationId] = useState(() => crypto.randomUUID())
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
@@ -19,7 +20,7 @@ export function JaimeView({ isAdmin, onChanged }: { isAdmin: boolean; onChanged:
   useEffect(() => {
     if (!isAdmin) return
     void refresh()
-    void api.jaimeStatus().then((result) => setChatStatus(result.status)).catch(() => setChatStatus('Sin conexión'))
+    void api.jaimeStatus().then((result) => { setChatStatus(result.status); setBridgeStatus(result.bridge_status) }).catch(() => setChatStatus('Sin conexión'))
   }, [isAdmin])
 
   async function send(event: FormEvent) {
@@ -52,7 +53,7 @@ export function JaimeView({ isAdmin, onChanged }: { isAdmin: boolean; onChanged:
   return <>
     <header className="page-header"><p className="eyebrow">Asistente familiar</p><h1>Jaime</h1></header>
     {chatStatus === 'Conectado' ? <section className="jaime-chat" aria-label="Conversación con Jaime">
-      <div className="jaime-messages" aria-live="polite">{messages.length ? messages.map((item, index) => <p className={`jaime-message ${item.role}`} key={index}>{item.content}</p>) : <div className="empty-state"><strong>Hola, soy Jaime</strong><p>Estoy conectado a OpenClaw. Las consultas de datos de Home Together y sus propuestas se están verificando por separado.</p></div>}{sending && <p className="muted">Jaime está consultando…</p>}</div>
+      <div className="jaime-messages" aria-live="polite">{messages.length ? messages.map((item, index) => <p className={`jaime-message ${item.role}`} key={index}>{item.content}</p>) : <div className="empty-state"><strong>Hola, soy Jaime</strong><p>{bridgeStatus === 'Configurado' ? 'El puente de consultas de Home Together está configurado. Puedo comprobar agenda, listas, presencia y bienestar autorizado.' : 'Estoy conectado a OpenClaw. Las consultas de Home Together están sin configurar.'}</p></div>}{sending && <p className="muted">Jaime está consultando…</p>}</div>
       <form className="jaime-composer" onSubmit={(event) => void send(event)}><label className="visually-hidden" htmlFor="jaime-message">Escribe a Jaime</label><input id="jaime-message" value={draft} maxLength={2000} onChange={(event) => setDraft(event.target.value)} placeholder="Escribe a Jaime" disabled={sending} /><button disabled={sending || !draft.trim()}>Enviar</button></form>
     </section> : <div className="empty-state"><strong>{chatStatus}</strong><p>{chatStatus === 'Sin configurar' ? 'La conversación necesita conectar OpenClaw en mewtwo. Las propuestas existentes se revisan aquí.' : 'No se pudo comprobar la conexión con OpenClaw.'}</p></div>}
     <p className="muted intro">Jaime comparte el agente principal de OpenClaw. Las propuestas de Home Together requieren tu confirmación aquí; sus otras herramientas conservan los permisos de OpenClaw. La voz se configurará después.</p>

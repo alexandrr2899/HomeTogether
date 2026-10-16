@@ -217,7 +217,7 @@ export const api = {
   },
   deleteTripDocument: (id: number, documentId: number) => deleteResource(`/api/v1/planning/trips/${id}/documents/${documentId}/`),
   jaimeProposals: () => request<JaimeProposal[]>('/api/v1/jaime/proposals/'),
-  jaimeStatus: () => request<{ status: string }>('/api/v1/jaime/chat/'),
+  jaimeStatus: () => request<{ status: string; bridge_status: string }>('/api/v1/jaime/chat/'),
   jaimeChat: (conversationId: string, message: string) => jsonMutation<JaimeChatResponse>('/api/v1/jaime/chat/', 'POST', { conversation_id: conversationId, message }),
   confirmJaimeProposal: (id: string) => request<JaimeProposal>(`/api/v1/jaime/proposals/${encodeURIComponent(id)}/confirm/`, { method: 'POST', headers: { 'X-CSRFToken': csrfToken() } }),
   discardJaimeProposal: (id: string) => deleteResource(`/api/v1/jaime/proposals/${encodeURIComponent(id)}/`),

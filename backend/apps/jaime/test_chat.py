@@ -25,6 +25,9 @@ class FakeOpenClaw:
 
 class JaimeChatTests(TestCase):
     def setUp(self):
+        self.bridge_env = patch.dict(os.environ, {"HT_JAIME_BRIDGE_TOKEN": ""})
+        self.bridge_env.start()
+        self.addCleanup(self.bridge_env.stop)
         User = get_user_model()
         self.actor = User.objects.create_user("alexander", password="test-only-password", is_staff=True)
         self.viewer = User.objects.create_user("viewer", password="test-only-password")

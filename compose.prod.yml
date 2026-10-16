@@ -19,6 +19,8 @@ services:
     restart: unless-stopped
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    ports:
+      - "127.0.0.1:18005:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -51,6 +53,7 @@ services:
       HT_OPENCLAW_URL: ${HT_OPENCLAW_URL:-}
       HT_OPENCLAW_TOKEN: ${HT_OPENCLAW_TOKEN:-}
       HT_OPENCLAW_AGENT_ID: ${HT_OPENCLAW_AGENT_ID:-main}
+      HT_JAIME_BRIDGE_TOKEN: ${HT_JAIME_BRIDGE_TOKEN:-}
     volumes:
       - private_uploads:/private_uploads
       - django_static:/app/staticfiles

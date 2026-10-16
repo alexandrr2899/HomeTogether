@@ -20,14 +20,27 @@ SYSTEM_MESSAGE = (
 )
 
 
-def run_chat(client, actor, conversation_id: UUID, message: str) -> dict:
-    messages = [{"role": "system", "content": SYSTEM_MESSAGE}, {"role": "user", "content": message}]
+def run_chat(client, actor, conversation_id: UUID, message: str, bridge_turn=None) -> dict:
+    if bridge_turn is not None:
+        system = (
+            "Eres Jaime, asistente de Home Together. Responde en español de forma breve. "
+            "Para consultar datos de Home Together usa la skill hometogether con el turno "
+            f"{bridge_turn.pk}. La skill permite consultas y propuestas autorizadas por Django. "
+            "Si la consulta falla, dilo sin inventar datos. No uses otras vías para consultar datos familiares. "
+            "Para cambios de tareas o compras, la skill solo prepara una propuesta que el usuario debe confirmar en Home Together. "
+            "Nunca digas que el cambio externo ya se guardó."
+        )
+    else:
+        system = SYSTEM_MESSAGE
+    messages = [{"role": "system", "content": system}, {"role": "user", "content": message}]
     user_key = f"hometogether:{actor.pk}:{conversation_id}"
     proposal_ids = []
     used_ids = set()
     for _ in range(3):
-        reply = client.complete(messages, user_key, TOOLS)
+        reply = client.complete(messages, user_key, [] if bridge_turn is not None else TOOLS)
         calls = reply.get("tool_calls")
+        if calls and bridge_turn is not None:
+            raise ChatError("Jaime solicitó una función fuera del puente autorizado")
         if not calls:
             content = reply.get("content")
             if not isinstance(content, str) or not content.strip() or len(content) > 8000:

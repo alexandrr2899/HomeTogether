@@ -1,6 +1,6 @@
 # Preparación de despliegue en mewtwo
 
-**Estado:** imágenes y stack preparados en lugia; no hay despliegue de producción, dominio HTTPS definitivo ni remoto Git configurado. La puesta en marcha requiere autorización cuando la app y las pruebas en iPhone estén listas.
+**Estado:** imágenes y stack preparados en lugia; no hay despliegue de producción ni dominio HTTPS definitivo. El repositorio GitHub ya está configurado. La puesta en marcha en mewtwo requiere autorización cuando la app y las pruebas en iPhone estén listas.
 
 ## Imágenes y Portainer
 
@@ -12,15 +12,17 @@ Portainer recibirá las variables en la configuración privada del stack, nunca 
 
 | Grupo | Variables |
 | --- | --- |
-| Imágenes y red | `HT_BACKEND_IMAGE`, `HT_FRONTEND_IMAGE`, `HT_HTTP_PORT` (opcional) |
+| Imágenes y red | `HT_BACKEND_IMAGE`, `HT_FRONTEND_IMAGE`, `HT_HTTP_PORT` (opcional); el puente usa el puerto fijo `18005` del host |
 | Django y base | `HT_DJANGO_SECRET_KEY`, `HT_DB_NAME`, `HT_DB_USER`, `HT_DB_PASSWORD`, `HT_ALLOWED_HOSTS`, `HT_CSRF_TRUSTED_ORIGINS` |
 | Home Assistant | `HOME_ASSISTANT_URL`, `HOME_ASSISTANT_TOKEN`, las tres `HT_LIST_*_ENTITY_ID`; si corresponde, `CLOUDFLARE_ACCESS_CLIENT_ID` y `CLOUDFLARE_ACCESS_CLIENT_SECRET` |
 | Google Calendar | `HT_GOOGLE_CLIENT_ID`, `HT_GOOGLE_CLIENT_SECRET`, `HT_GOOGLE_REFRESH_TOKEN`, `HT_GOOGLE_CALENDAR_ID`, `HT_GOOGLE_REDIRECT_URI` |
-| Jaime (opcional hasta conectar OpenClaw) | `HT_OPENCLAW_URL`, `HT_OPENCLAW_TOKEN`, `HT_OPENCLAW_AGENT_ID` (por defecto `main`) |
+| Jaime | `HT_OPENCLAW_URL`, `HT_OPENCLAW_TOKEN`, `HT_OPENCLAW_AGENT_ID` (por defecto `main`), `HT_JAIME_BRIDGE_TOKEN` |
 
 La URI OAuth de producción será `https://<dominio-final>/api/v1/calendar/oauth/callback/`; se registrará en Google Cloud cuando se conozca el dominio final. El backend lee solo esas variables en producción; el `.env` de lugia no se copia a la imagen. El arranque de Django aplica migraciones y recoge archivos estáticos antes de abrir Gunicorn. PostgreSQL debe pasar su comprobación de salud antes de que Django arranque.
 
 Jaime queda `Sin configurar` si faltan URL o token de OpenClaw. En desarrollo, lugia llega al agente `main` por un túnel SSH local; ese túnel no forma parte del stack de producción. El backend de Portainer tiene el alias `host.docker.internal`, pero el Gateway actual escucha solo en loopback. Antes de desplegar hará falta un enlace privado desde Docker hacia ese loopback, con autenticación y sin exposición pública. [Las verificaciones y el diseño de red pendientes](integracion-openclaw.md) detallan la conexión. Ningún secreto de OpenClaw se entrega al frontend.
+
+Para la dirección OpenClaw → Django, el stack publica el backend en `127.0.0.1:18005` del host. La skill versionada en `openclaw/hometogether/` se instala en el espacio de trabajo de `main`, y su script lee el segundo token desde `~/.openclaw/hometogether-bridge.token` con permisos `0600`. Nginx bloquea la ruta del puente en el frontend público. `HT_ALLOWED_HOSTS` debe incluir `127.0.0.1` además del dominio final, y el token de puente debe coincidir entre el backend y el archivo privado de mewtwo. En desarrollo ambos destinos ya están configurados; la red depende de un túnel SSH inverso que no forma parte del stack de producción.
 
 ## Copias y restauración
 

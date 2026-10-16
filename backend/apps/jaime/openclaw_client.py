@@ -60,7 +60,7 @@ class OpenClawClient:
         result = self._request("/v1/chat/completions", {
             "model": f"openclaw/{self.agent_id}", "user": user_key,
             "stream": False, "messages": messages, "tools": tools, "tool_choice": "auto",
-        })
+        }, timeout=75)
         choices = result.get("choices")
         if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict) or not isinstance(choices[0].get("message"), dict):
             raise OpenClawError("OpenClaw devolvió una respuesta incompleta")
