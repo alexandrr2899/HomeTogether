@@ -15,7 +15,8 @@ SYSTEM_MESSAGE = (
     "Consulta las funciones para datos actuales; no inventes eventos, tareas ni presencia. "
     "Una propuesta requiere confirmación posterior del usuario en Home Together. "
     "Nunca afirmes que un cambio externo se guardó al crear una propuesta. "
-    "No solicites secretos ni uses capacidades fuera de las funciones proporcionadas."
+    "Para consultar o proponer cambios de datos de Home Together usa las funciones proporcionadas. "
+    "Conservas tus demás capacidades de OpenClaw bajo sus permisos actuales. No solicites secretos."
 )
 
 

@@ -50,7 +50,7 @@ services:
       HT_GOOGLE_REDIRECT_URI: ${HT_GOOGLE_REDIRECT_URI}
       HT_OPENCLAW_URL: ${HT_OPENCLAW_URL:-}
       HT_OPENCLAW_TOKEN: ${HT_OPENCLAW_TOKEN:-}
-      HT_OPENCLAW_AGENT_ID: ${HT_OPENCLAW_AGENT_ID:-jaime}
+      HT_OPENCLAW_AGENT_ID: ${HT_OPENCLAW_AGENT_ID:-main}
     volumes:
       - private_uploads:/private_uploads
       - django_static:/app/staticfiles

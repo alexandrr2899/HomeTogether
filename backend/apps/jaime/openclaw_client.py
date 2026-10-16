@@ -72,4 +72,4 @@ def configured_client() -> OpenClawClient | None:
     token = os.environ.get("HT_OPENCLAW_TOKEN", "").strip()
     if not base_url or not token:
         return None
-    return OpenClawClient(base_url, token, os.environ.get("HT_OPENCLAW_AGENT_ID", "jaime").strip())
+    return OpenClawClient(base_url, token, os.environ.get("HT_OPENCLAW_AGENT_ID", "main").strip())

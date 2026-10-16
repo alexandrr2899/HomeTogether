@@ -85,7 +85,7 @@ export function WellnessSettings({ onChanged }: { onChanged: () => Promise<void>
           return stat && <label key={key}><input type="checkbox" checked={draft.shared_metrics.includes(key)} disabled={busy} onChange={() => toggleShared(key)} /><span><strong>{stat.label}</strong><small>Permitir que la otra cuenta lo consulte</small></span></label>
         })}</div> : <p className="muted">Sin indicadores seleccionados.</p>}
       </div>
-      <div className="privacy-options garmin-jaime"><label><input type="checkbox" checked={draft.allow_jaime} disabled={busy} onChange={() => { setSuccess(''); setDraft({ ...draft, allow_jaime: !draft.allow_jaime }) }} /><span><strong>Permitir a Jaime</strong><small>Podrá consultar tus indicadores visibles cuando conectemos el asistente.</small></span></label></div>
+      <div className="privacy-options garmin-jaime"><label><input type="checkbox" checked={draft.allow_jaime} disabled={busy} onChange={() => { setSuccess(''); setDraft({ ...draft, allow_jaime: !draft.allow_jaime }) }} /><span><strong>Compartir indicadores desde Home Together con Jaime</strong><small>Controla esta función de la app. El agente principal conserva sus herramientas generales de OpenClaw; este ajuste no las limita.</small></span></label></div>
       <button className="primary-button" disabled={busy || !changed} onClick={() => void save()}>{busy ? 'Guardando…' : 'Guardar preferencias'}</button>
       {success && <p className="success-message" role="status">{success}</p>}
     </>}
