@@ -4,7 +4,7 @@
 
 ## Imágenes y Portainer
 
-`backend/Dockerfile` empaqueta Django/Gunicorn y `frontend/Dockerfile` construye React y lo sirve con Nginx. El workflow `.github/workflows/images.yml` publicará ambas imágenes en GHCR cuando exista un repositorio GitHub y se envíe la rama `main`. `compose.prod.yml` usa `HT_BACKEND_IMAGE` y `HT_FRONTEND_IMAGE` para esas imágenes. Si el paquete queda privado, Portainer necesitará credenciales de lectura de GHCR configuradas fuera de Git.
+`backend/Dockerfile` empaqueta Django/Gunicorn y `frontend/Dockerfile` construye React y lo sirve con Nginx. El workflow `.github/workflows/images.yml` publica ambas imágenes en GHCR al enviar la rama `main`; se comprobarán permisos y etiquetas antes del despliegue. `compose.prod.yml` usa `HT_BACKEND_IMAGE` y `HT_FRONTEND_IMAGE` para esas imágenes. Si el paquete queda privado, Portainer necesitará credenciales de lectura de GHCR configuradas fuera de Git.
 
 El stack conserva PostgreSQL, documentos privados y estáticos de Django en volúmenes separados. Nginx escucha dentro del contenedor en 8080 y el puerto del host se limita a `127.0.0.1:${HT_HTTP_PORT:-8088}`. El proxy HTTPS de mewtwo deberá alcanzar ese puerto, establecer `X-Forwarded-Proto: https`, conservar el encabezado `Host` y controlar quién puede enviar encabezados de proxy. No se debe publicar la aplicación por HTTP abierto. Nginx no registra líneas de petición para evitar que el código temporal de OAuth aparezca en logs.
 
@@ -12,7 +12,7 @@ Portainer recibirá las variables en la configuración privada del stack, nunca 
 
 | Grupo | Variables |
 | --- | --- |
-| Imágenes y red | `HT_BACKEND_IMAGE`, `HT_FRONTEND_IMAGE`, `HT_HTTP_PORT` (opcional); el puente usa el puerto fijo `18005` del host |
+| Imágenes y red | `HT_BACKEND_IMAGE`, `HT_FRONTEND_IMAGE`, `HT_HTTP_PORT` (opcional); el puente usa `18005` en loopback y el relay escucha en `172.17.0.1:18890` |
 | Django y base | `HT_DJANGO_SECRET_KEY`, `HT_DB_NAME`, `HT_DB_USER`, `HT_DB_PASSWORD`, `HT_ALLOWED_HOSTS`, `HT_CSRF_TRUSTED_ORIGINS` |
 | Home Assistant | `HOME_ASSISTANT_URL`, `HOME_ASSISTANT_TOKEN`, las tres `HT_LIST_*_ENTITY_ID`; si corresponde, `CLOUDFLARE_ACCESS_CLIENT_ID` y `CLOUDFLARE_ACCESS_CLIENT_SECRET` |
 | Google Calendar | `HT_GOOGLE_CLIENT_ID`, `HT_GOOGLE_CLIENT_SECRET`, `HT_GOOGLE_REFRESH_TOKEN`, `HT_GOOGLE_CALENDAR_ID`, `HT_GOOGLE_REDIRECT_URI` |
@@ -20,9 +20,11 @@ Portainer recibirá las variables en la configuración privada del stack, nunca 
 
 La URI OAuth de producción será `https://<dominio-final>/api/v1/calendar/oauth/callback/`; se registrará en Google Cloud cuando se conozca el dominio final. El backend lee solo esas variables en producción; el `.env` de lugia no se copia a la imagen. El arranque de Django aplica migraciones y recoge archivos estáticos antes de abrir Gunicorn. PostgreSQL debe pasar su comprobación de salud antes de que Django arranque.
 
-Jaime queda `Sin configurar` si faltan URL o token de OpenClaw. En desarrollo, lugia llega al agente `main` por un túnel SSH local; ese túnel no forma parte del stack de producción. El backend de Portainer tiene el alias `host.docker.internal`, pero el Gateway actual escucha solo en loopback. Antes de desplegar hará falta un enlace privado desde Docker hacia ese loopback, con autenticación y sin exposición pública. [Las verificaciones y el diseño de red pendientes](integracion-openclaw.md) detallan la conexión. Ningún secreto de OpenClaw se entrega al frontend.
+Jaime queda `Sin configurar` si falta el token de OpenClaw. En desarrollo, lugia llega al agente `main` por un túnel SSH local; ese túnel no forma parte del stack de producción. En producción, el backend usará por defecto `http://host.docker.internal:18890`. El servicio `gateway_relay` utiliza la imagen del frontend con una configuración Nginx distinta, escucha solo en `172.17.0.1:18890` y reenvía a OpenClaw en loopback. Solo acepta el origen `172.30.90.2` reservado al backend y dos rutas exactas. Esta ruta se probó con un relay y una red **temporales** en mewtwo; la llamada autenticada y el stack de Portainer siguen pendientes. [El ensayo y sus límites](integracion-openclaw.md) detallan la conexión. Ningún secreto de OpenClaw se entrega al frontend.
 
 Para la dirección OpenClaw → Django, el stack publica el backend en `127.0.0.1:18005` del host. La skill versionada en `openclaw/hometogether/` se instala en el espacio de trabajo de `main`, y su script lee el segundo token desde `~/.openclaw/hometogether-bridge.token` con permisos `0600`. Nginx bloquea la ruta del puente en el frontend público. `HT_ALLOWED_HOSTS` debe incluir `127.0.0.1` además del dominio final, y el token de puente debe coincidir entre el backend y el archivo privado de mewtwo. En desarrollo ambos destinos ya están configurados; la red depende de un túnel SSH inverso que no forma parte del stack de producción.
+
+Antes de iniciar Portainer se comprobará que `docker0` sigue en `172.17.0.1`, que `18890` está libre, que `172.30.90.0/24` no se solapa con otra red y que el host no expone el relay por la LAN. El puerto `18790` ya estaba ocupado en mewtwo y no se utiliza para este relay. Después del arranque se verificará una petición autenticada desde el backend al Gateway, el rechazo de otras IP y rutas, y que Telegram sigue funcionando. La configuración actual de OpenClaw no necesita cambios.
 
 ## Copias y restauración
 

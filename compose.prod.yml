@@ -13,12 +13,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    networks:
+      - app_net
 
   backend:
     image: ${HT_BACKEND_IMAGE}
     restart: unless-stopped
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    networks:
+      app_net:
+        ipv4_address: 172.30.90.2
     ports:
       - "127.0.0.1:18005:8000"
     depends_on:
@@ -50,7 +55,7 @@ services:
       HT_GOOGLE_REFRESH_TOKEN: ${HT_GOOGLE_REFRESH_TOKEN}
       HT_GOOGLE_CALENDAR_ID: ${HT_GOOGLE_CALENDAR_ID}
       HT_GOOGLE_REDIRECT_URI: ${HT_GOOGLE_REDIRECT_URI}
-      HT_OPENCLAW_URL: ${HT_OPENCLAW_URL:-}
+      HT_OPENCLAW_URL: ${HT_OPENCLAW_URL:-http://host.docker.internal:18890}
       HT_OPENCLAW_TOKEN: ${HT_OPENCLAW_TOKEN:-}
       HT_OPENCLAW_AGENT_ID: ${HT_OPENCLAW_AGENT_ID:-main}
       HT_JAIME_BRIDGE_TOKEN: ${HT_JAIME_BRIDGE_TOKEN:-}
@@ -67,8 +72,23 @@ services:
       - "127.0.0.1:${HT_HTTP_PORT:-8088}:8080"
     volumes:
       - django_static:/staticfiles:ro
+    networks:
+      - app_net
+
+  gateway_relay:
+    image: ${HT_FRONTEND_IMAGE}
+    restart: unless-stopped
+    user: "10001:10001"
+    network_mode: host
+    command: ["nginx", "-c", "/etc/nginx/openclaw-relay.conf", "-g", "daemon off;"]
 
 volumes:
   postgres_data:
   private_uploads:
   django_static:
+
+networks:
+  app_net:
+    ipam:
+      config:
+        - subnet: 172.30.90.0/24
